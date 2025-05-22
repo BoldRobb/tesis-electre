@@ -21,8 +21,15 @@ pip install -r requirements.txt
 ```
 ## 3. Configuración de variables de entorno
 
-Crea un archivo .env en la raíz del proyecto con el siguiente contenido (ajusta los valores<vscode_annotation details='%5B%7B%22title%22%3A%22hardcoded-credentials%22%2C%22description%22%3A%22Embedding%20credentials%20in%20source%20code%20risks%20unauthorized%20access%22%7D%5D'> según</vscode_annotation> tu entorno):
-
+Crea un archivo .env en la raíz del proyecto con el siguiente contenido (ajusta los valores según tu entorno):
+```bash
+MYSQL_USER=tu_usuario
+MYSQL_PASSWORD=tu_contraseña
+MYSQL_HOST=localhost
+MYSQL_PORT=3306
+MYSQL_DATABASE=electre
+SECRET_KEY=tu_clave_secreta
+```
 Nota: Puedes modificar otros valores en app/core/config.py según tus necesidades.
 
 ## 4. Configuración de la base de datos
