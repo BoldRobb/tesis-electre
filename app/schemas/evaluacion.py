@@ -1,3 +1,6 @@
+
+from pydantic import BaseModel
+
 class EvaluacionBase(BaseModel):
     value: float
 

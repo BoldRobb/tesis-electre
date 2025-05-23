@@ -4,13 +4,15 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app import crud, models, schemas
+from app.schemas.alternativa import AlternativaCreate, AlternativaUpdate, Alternativa
+
 from app.api import deps
 from app.db.session import get_db
 
 router = APIRouter()
 
 
-@router.get("/escenario/{escenario_id}", response_model=List[schemas.Alternativa])
+@router.get("/escenario/{escenario_id}", response_model=List[Alternativa])
 def read_alternativas_by_escenario(
     *,
     db: Session = Depends(get_db),
@@ -34,11 +36,11 @@ def read_alternativas_by_escenario(
     return alternativas
 
 
-@router.post("/", response_model=schemas.Alternativa)
+@router.post("/", response_model=Alternativa)
 def create_alternativa(
     *,
     db: Session = Depends(get_db),
-    alternativa_in: schemas.AlternativaCreate,
+    alternativa_in: AlternativaCreate,
     current_user: models.User = Depends(deps.get_current_user),
 ) -> Any:
     """
@@ -59,12 +61,12 @@ def create_alternativa(
     return alternativa
 
 
-@router.put("/{id}", response_model=schemas.Alternativa)
+@router.put("/{id}", response_model=Alternativa)
 def update_alternativa(
     *,
     db: Session = Depends(get_db),
     id: int,
-    alternativa_in: schemas.AlternativaUpdate,
+    alternativa_in: AlternativaUpdate,
     current_user: models.User = Depends(deps.get_current_user),
 ) -> Any:
     """
@@ -93,7 +95,7 @@ def update_alternativa(
     return alternativa
 
 
-@router.get("/{id}", response_model=schemas.Alternativa)
+@router.get("/{id}", response_model=Alternativa)
 def read_alternativa(
     *,
     db: Session = Depends(get_db),

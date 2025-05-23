@@ -4,13 +4,14 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app import crud, models, schemas
+from app.schemas.proyecto import ProyectoCreate, ProyectoUpdate, Proyecto
 from app.api import deps
 from app.db.session import get_db
 
 router = APIRouter()
 
 
-@router.get("/", response_model=List[schemas.Proyecto])
+@router.get("/", response_model=List[Proyecto])
 def read_proyectos(
     db: Session = Depends(get_db),
     skip: int = 0,
@@ -26,11 +27,11 @@ def read_proyectos(
     return proyectos
 
 
-@router.post("/", response_model=schemas.Proyecto)
+@router.post("/", response_model=Proyecto)
 def create_proyecto(
     *,
     db: Session = Depends(get_db),
-    proyecto_in: schemas.ProyectoCreate,
+    proyecto_in: ProyectoCreate,
     current_user: models.User = Depends(deps.get_current_user),
 ) -> Any:
     """
@@ -43,12 +44,12 @@ def create_proyecto(
     return proyecto
 
 
-@router.put("/{id}", response_model=schemas.Proyecto)
+@router.put("/{id}", response_model=Proyecto)
 def update_proyecto(
     *,
     db: Session = Depends(get_db),
     id: int,
-    proyecto_in: schemas.ProyectoUpdate,
+    proyecto_in: ProyectoUpdate,
     current_user: models.User = Depends(deps.get_current_user),
 ) -> Any:
     """
@@ -71,7 +72,7 @@ def update_proyecto(
     return proyecto
 
 
-@router.get("/{id}", response_model=schemas.Proyecto)
+@router.get("/{id}", response_model=Proyecto)
 def read_proyecto(
     *,
     db: Session = Depends(get_db),

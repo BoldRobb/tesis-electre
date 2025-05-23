@@ -4,13 +4,14 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app import crud, models, schemas
+from app.schemas.evaluacion import EvaluacionCreate, EvaluacionUpdate, Evaluacion
 from app.api import deps
 from app.db.session import get_db
 
 router = APIRouter()
 
 
-@router.get("/escenario/{escenario_id}", response_model=List[schemas.Evaluacion])
+@router.get("/escenario/{escenario_id}", response_model=List[Evaluacion])
 def read_evaluaciones_by_escenario(
     *,
     db: Session = Depends(get_db),
@@ -34,7 +35,7 @@ def read_evaluaciones_by_escenario(
     return evaluaciones
 
 
-@router.get("/alternativa/{alternativa_id}", response_model=List[schemas.Evaluacion])
+@router.get("/alternativa/{alternativa_id}", response_model=List[Evaluacion])
 def read_evaluaciones_by_alternativa(
     *,
     db: Session = Depends(get_db),

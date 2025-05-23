@@ -4,13 +4,14 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app import crud, models, schemas
+from app.schemas.criterio import CriterioCreate, CriterioUpdate, Criterio
 from app.api import deps
 from app.db.session import get_db
 
 router = APIRouter()
 
 
-@router.get("/escenario/{escenario_id}", response_model=List[schemas.Criterio])
+@router.get("/escenario/{escenario_id}", response_model=List[Criterio])
 def read_criterios_by_escenario(
     *,
     db: Session = Depends(get_db),
@@ -34,11 +35,11 @@ def read_criterios_by_escenario(
     return criterios
 
 
-@router.post("/", response_model=schemas.Criterio)
+@router.post("/", response_model=Criterio)
 def create_criterio(
     *,
     db: Session = Depends(get_db),
-    criterio_in: schemas.CriterioCreate,
+    criterio_in: CriterioCreate,
     current_user: models.User = Depends(deps.get_current_user),
 ) -> Any:
     """
@@ -59,12 +60,12 @@ def create_criterio(
     return criterio
 
 
-@router.put("/{id}", response_model=schemas.Criterio)
+@router.put("/{id}", response_model=Criterio)
 def update_criterio(
     *,
     db: Session = Depends(get_db),
     id: int,
-    criterio_in: schemas.CriterioUpdate,
+    criterio_in: CriterioUpdate,
     current_user: models.User = Depends(deps.get_current_user),
 ) -> Any:
     """
@@ -93,7 +94,7 @@ def update_criterio(
     return criterio
 
 
-@router.get("/{id}", response_model=schemas.Criterio)
+@router.get("/{id}", response_model=Criterio)
 def read_criterio(
     *,
     db: Session = Depends(get_db),

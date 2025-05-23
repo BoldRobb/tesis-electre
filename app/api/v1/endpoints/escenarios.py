@@ -4,13 +4,14 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app import crud, models, schemas
+from app.schemas.escenario import EscenarioCreate, EscenarioUpdate, Escenario
 from app.api import deps
 from app.db.session import get_db
 
 router = APIRouter()
 
 
-@router.get("/proyecto/{proyecto_id}", response_model=List[schemas.Escenario])
+@router.get("/proyecto/{proyecto_id}", response_model=List[Escenario])
 def read_escenarios_by_proyecto(
     *,
     db: Session = Depends(get_db),
@@ -34,11 +35,11 @@ def read_escenarios_by_proyecto(
     return escenarios
 
 
-@router.post("/", response_model=schemas.Escenario)
+@router.post("/", response_model=Escenario)
 def create_escenario(
     *,
     db: Session = Depends(get_db),
-    escenario_in: schemas.EscenarioCreate,
+    escenario_in: EscenarioCreate,
     current_user: models.User = Depends(deps.get_current_user),
 ) -> Any:
     """
@@ -59,12 +60,12 @@ def create_escenario(
     return escenario
 
 
-@router.put("/{id}", response_model=schemas.Escenario)
+@router.put("/{id}", response_model=Escenario)
 def update_escenario(
     *,
     db: Session = Depends(get_db),
     id: int,
-    escenario_in: schemas.EscenarioUpdate,
+    escenario_in: EscenarioUpdate,
     current_user: models.User = Depends(deps.get_current_user),
 ) -> Any:
     """
@@ -87,7 +88,7 @@ def update_escenario(
     return escenario
 
 
-@router.get("/{id}", response_model=schemas.Escenario)
+@router.get("/{id}", response_model=Escenario)
 def read_escenario(
     *,
     db: Session = Depends(get_db),
