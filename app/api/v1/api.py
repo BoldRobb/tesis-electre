@@ -2,7 +2,7 @@ from fastapi import APIRouter
 
 # Importa aquí todos los routers de los endpoints de la carpeta actual
 # Por ejemplo, si tienes archivos como users.py, items.py, etc.
-from app.api.v1.endpoints import auth, alternativas, criterios, escenarios, evaluaciones, proyectos
+from app.api.v1.endpoints import auth, alternativas, criterios, escenarios, evaluaciones, proyectos, electre
 api_router = APIRouter()
 
 # Incluye los routers importados
@@ -12,5 +12,5 @@ api_router.include_router(criterios.router, prefix="/criterios", tags=["criterio
 api_router.include_router(escenarios.router, prefix="/escenarios", tags=["escenarios"])
 api_router.include_router(evaluaciones.router, prefix="/evaluaciones", tags=["evaluaciones"])
 api_router.include_router(proyectos.router, prefix="/proyectos", tags=["proyectos"])
-
+api_router.include_router(electre.router, prefix="/electre", tags=["electre"])
 

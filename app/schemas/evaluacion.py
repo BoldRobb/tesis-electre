@@ -14,7 +14,7 @@ class EvaluacionCreate(EvaluacionBase):
 
 # Propiedades para actualizar una evaluación
 class EvaluacionUpdate(EvaluacionBase):
-    pass
+    id: int | None = None
 
 
 # Propiedades en la respuesta de la API

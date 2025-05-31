@@ -7,6 +7,10 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "Sistema de Apoyo a la Toma de Decisiones"
     API_V1_STR: str = "/api/v1"
     
+    # DLLS
+    DLL_PATH: str
+    DEBUGGER_PATH: str
+
     # JWT
     SECRET_KEY: str 
     ALGORITHM: str = "HS256"
