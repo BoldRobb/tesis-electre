@@ -546,6 +546,8 @@ def ejecutar_electre3_desde_bd_flujo_neto(db: Session, escenario_id: int,
             
             if resultado:
                 resultado_str = resultado.decode('utf-8')
+                print("Resultado ELECTRE III:")
+                print(resultado_str)
                 resultado_alternativas = interpretar_resultado_flujo_neto(resultado_str)
                 print("Alternativas ordenadas por ELECTRE III:")
                 print(resultado_alternativas)
@@ -610,6 +612,8 @@ def ejecutar_electre3_desde_bd_destilacion(db: Session, escenario_id: int,
             
             if resultado:
                 resultado_str = resultado.decode('utf-8')
+                print("Resultado ELECTRE III:")
+                print(resultado_str)
                 # Interpretar el resultado
                 resultado_alternativas = interpretar_resultado_destilacion(resultado_str)
                 print("Alternativas ordenadas por ELECTRE III:")
