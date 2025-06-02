@@ -186,7 +186,7 @@ def csv_temporal_electre3(alternativas_matriz, criterios_nombres, pesos,
 
 def ejecutar_electre3_con_dll(dll_path, alternativas_matriz, criterios_nombres, 
                              pesos, preferencia, indiferencia, veto, direccion,
-                             nombres_alternativas=None, lambda_corte=0.67):
+                             nombres_alternativas=None, lambda_corte=-1):
     """
     Ejecuta ELECTRE III usando una DLL de C++
     
@@ -500,7 +500,7 @@ def csv_temporal_electre3_desde_bd(db: Session, escenario_id: int):
             print(f"No se pudo eliminar el archivo temporal: {archivo_temporal}")
 
 def ejecutar_electre3_desde_bd_flujo_neto(db: Session, escenario_id: int,
-                              lambda_corte: float = 0.60) -> Optional[str]:
+                              lambda_corte: float = -1) -> Optional[str]:
     """
     Ejecuta ELECTRE III usando datos directamente de la base de datos
     
@@ -563,7 +563,7 @@ def ejecutar_electre3_desde_bd_flujo_neto(db: Session, escenario_id: int,
 
 
 def ejecutar_electre3_desde_bd_destilacion(db: Session, escenario_id: int,
-                              lambda_corte: float = 0.50) -> Optional[str]:
+                              lambda_corte: float = -1) -> Optional[str]:
     """
     Ejecuta ELECTRE III usando datos directamente de la base de datos
     
@@ -742,7 +742,7 @@ def ejecutar_electre3_desde_argumentos_flujo_neto(
     indiferencia,
     veto,
     direccion,
-    lambda_corte: float = 0.50,
+    lambda_corte: float = -1,
     nombres_alternativas=None
 ) -> Optional[str]:
     """
@@ -823,7 +823,7 @@ def ejecutar_electre3_desde_argumentos_destilacion(
     indiferencia,
     veto,
     direccion,
-    lambda_corte: float = 0.50,
+    lambda_corte: float = -1,
     nombres_alternativas=None
 ) -> Optional[str]:
     """
