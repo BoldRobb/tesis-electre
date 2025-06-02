@@ -1,7 +1,7 @@
 from typing import Any, List
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app import crud, models, schemas
 from app.schemas.evaluacion import EvaluacionCreate, EvaluacionUpdate, Evaluacion
@@ -157,6 +157,7 @@ def read_evaluaciones_by_criterio(
     return evaluaciones
 
 
+
 @router.put("/matriz/escenario/{escenario_id}", response_model=List[Evaluacion])
 def update_evaluaciones_matriz(
     *,
@@ -166,7 +167,7 @@ def update_evaluaciones_matriz(
     current_user: models.User = Depends(deps.get_current_user),
 ) -> Any:
     """
-    Actualizar múltiples evaluaciones de la matriz de un escenario
+    Actualizar múltiples evaluaciones de la matriz de un escenario por ID.
     """
     # Verificar que el escenario pertenece al usuario
     escenario = db.query(models.Escenario).join(models.Proyecto).filter(
@@ -175,52 +176,44 @@ def update_evaluaciones_matriz(
     ).first()
     if not escenario:
         raise HTTPException(status_code=404, detail="Escenario no encontrado")
-    
-    # Obtener todas las evaluaciones del escenario
+
+    # Obtener los IDs de las evaluaciones a actualizar
+    ids = [e.id for e in evaluaciones_data if hasattr(e, "id") and e.id is not None]
+    if not ids:
+        raise HTTPException(status_code=400, detail="Debes enviar los IDs de las evaluaciones a actualizar")
+
+    # Obtener solo las evaluaciones con esos IDs y que pertenezcan al escenario
     evaluaciones_existentes = db.query(models.Evaluacion).filter(
-        models.Evaluacion.escenario_id == escenario_id
+        models.Evaluacion.escenario_id == escenario_id,
+        models.Evaluacion.id.in_(ids)
     ).all()
-    
-    if not evaluaciones_existentes:
-        raise HTTPException(
-            status_code=404, 
-            detail="No existen evaluaciones para este escenario. Use el endpoint de creación de matriz."
-        )
-    
-    # Crear un diccionario para búsqueda rápida por criterio_id y alternativa_id
-    evaluaciones_dict = {
-        (eval.criterio_id, eval.alternativa_id): eval 
-        for eval in evaluaciones_existentes
-    }
-    
+    eval_dict = {e.id: e for e in evaluaciones_existentes}
+
     evaluaciones_actualizadas = []
-    
     for eval_data in evaluaciones_data:
-        # Buscar la evaluación correspondiente
-        key = (eval_data.criterio_id, eval_data.alternativa_id)
-        evaluacion = evaluaciones_dict.get(key)
-        
+        evaluacion = eval_dict.get(eval_data.id)
         if not evaluacion:
             raise HTTPException(
-                status_code=404, 
-                detail=f"No se encontró evaluación para criterio {eval_data.criterio_id} y alternativa {eval_data.alternativa_id}"
+                status_code=404,
+                detail=f"No se encontró evaluación con id {eval_data.id} en el escenario"
             )
-        
-        # Actualizar los campos proporcionados
-        eval_dict = eval_data.dict(exclude_unset=True)
-        for field, value in eval_dict.items():
-            if field not in ['criterio_id', 'alternativa_id']:  # No permitir cambiar estas claves
+        eval_dict_data = eval_data.dict(exclude_unset=True)
+        for field, value in eval_dict_data.items():
+            if field != "id":
                 setattr(evaluacion, field, value)
-        
         evaluaciones_actualizadas.append(evaluacion)
-    
+
     db.commit()
-    
-    # Refrescar todas las evaluaciones actualizadas
-    for evaluacion in evaluaciones_actualizadas:
-        db.refresh(evaluacion)
-    
-    return evaluaciones_actualizadas
+
+    # Devolver las evaluaciones actualizadas con criterio y alternativa anidados
+    evaluaciones_con_objetos = db.query(models.Evaluacion).options(
+        joinedload(models.Evaluacion.criterio),
+        joinedload(models.Evaluacion.alternativa)
+    ).filter(
+        models.Evaluacion.id.in_(ids)
+    ).all()
+
+    return evaluaciones_con_objetos
 
 
 @router.post("/matriz/escenario/{escenario_id}", response_model=List[Evaluacion])
