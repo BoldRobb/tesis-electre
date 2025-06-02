@@ -6,7 +6,7 @@ from pydantic import BaseModel, confloat
 class CriterioBase(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
-    weight: Optional[float] = 1.0
+    weight: Optional[float] = 0.0
     is_benefit: Optional[bool] = True
     preference_threshold: Optional[float] = None
     indifference_threshold: Optional[float] = None

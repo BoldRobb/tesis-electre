@@ -44,7 +44,6 @@ def login_access_token(
         "token_type": "bearer",
     }
 
-
 @router.post("/register", response_model=User)
 def register(
     *,
