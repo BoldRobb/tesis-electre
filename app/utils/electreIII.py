@@ -500,7 +500,7 @@ def csv_temporal_electre3_desde_bd(db: Session, escenario_id: int):
             print(f"No se pudo eliminar el archivo temporal: {archivo_temporal}")
 
 def ejecutar_electre3_desde_bd_flujo_neto(db: Session, escenario_id: int,
-                              lambda_corte: float = 0.50) -> Optional[str]:
+                              lambda_corte: float = 0.60) -> Optional[str]:
     """
     Ejecuta ELECTRE III usando datos directamente de la base de datos
     
