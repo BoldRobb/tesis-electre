@@ -1,6 +1,7 @@
 
 from pydantic import BaseModel
-
+from app.schemas.criterio import Criterio
+from app.schemas.alternativa import Alternativa
 class EvaluacionBase(BaseModel):
     value: float
 
@@ -20,9 +21,9 @@ class EvaluacionUpdate(EvaluacionBase):
 # Propiedades en la respuesta de la API
 class EvaluacionInDB(EvaluacionBase):
     id: int
-    alternativa_id: int
-    criterio_id: int
     escenario_id: int
+    criterio: Criterio
+    alternativa: Alternativa
     
     class Config:
         orm_mode = True
