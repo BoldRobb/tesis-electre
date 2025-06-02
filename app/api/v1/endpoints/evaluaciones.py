@@ -428,3 +428,63 @@ def delete_evaluacion(
     db.delete(evaluacion)
     db.commit()
     return {"message": "Evaluación eliminada correctamente"}
+
+@router.post("/matriz/escenario/{escenario_id}/completar", response_model=List[Evaluacion])
+def completar_evaluaciones_matriz(
+    *,
+    db: Session = Depends(get_db),
+    escenario_id: int,
+    current_user: models.User = Depends(deps.get_current_user),
+) -> Any:
+    """
+    Completa la matriz de evaluaciones para un escenario:
+    - Si la evaluación existe, la deja igual.
+    - Si no existe, la crea con valor 0.
+    """
+    # Verificar que el escenario pertenece al usuario
+    escenario = db.query(models.Escenario).join(models.Proyecto).filter(
+        models.Escenario.id == escenario_id,
+        models.Proyecto.owner_id == current_user.id
+    ).first()
+    if not escenario:
+        raise HTTPException(status_code=404, detail="Escenario no encontrado")
+    
+    criterios = db.query(models.Criterio).filter(
+        models.Criterio.escenario_id == escenario_id
+    ).all()
+    alternativas = db.query(models.Alternativa).filter(
+        models.Alternativa.escenario_id == escenario_id
+    ).all()
+    
+    if not criterios or not alternativas:
+        raise HTTPException(status_code=400, detail="El escenario debe tener criterios y alternativas")
+    
+    # Obtener todas las evaluaciones existentes en el escenario
+    evaluaciones_existentes = db.query(models.Evaluacion).filter(
+        models.Evaluacion.escenario_id == escenario_id
+    ).all()
+    eval_dict = {
+        (e.criterio_id, e.alternativa_id): e for e in evaluaciones_existentes
+    }
+    
+    nuevas_evaluaciones = []
+    for criterio in criterios:
+        for alternativa in alternativas:
+            key = (criterio.id, alternativa.id)
+            if key not in eval_dict:
+                evaluacion = models.Evaluacion(
+                    criterio_id=criterio.id,
+                    alternativa_id=alternativa.id,
+                    escenario_id=escenario_id,
+                    value=0.0
+                )
+                db.add(evaluacion)
+                nuevas_evaluaciones.append(evaluacion)
+    
+    db.commit()
+    
+    # Devolver todas las evaluaciones del escenario (existentes y nuevas)
+    todas = db.query(models.Evaluacion).filter(
+        models.Evaluacion.escenario_id == escenario_id
+    ).all()
+    return todas
