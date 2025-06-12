@@ -54,6 +54,7 @@ def create_escenario(
         raise HTTPException(status_code=404, detail="Proyecto no encontrado")
     
     escenario = models.Escenario(**escenario_in.dict())
+    escenario.corte = -1  # Asignar valor por defecto a corte
     db.add(escenario)
     db.commit()
     db.refresh(escenario)
@@ -128,11 +129,15 @@ def delete_escenario(
     db.commit()
     return {"message": "Escenario eliminado correctamente"}
 
+
+
+
 @router.post("/{id}/clonar", response_model=Escenario)
 def clonar_escenario(
     *,
     db: Session = Depends(get_db),
     id: int,
+    nuevo_nombre: str,
     current_user: models.User = Depends(deps.get_current_user),
 ) -> Any:
     """
@@ -148,9 +153,11 @@ def clonar_escenario(
 
     # Crear el nuevo escenario (clon)
     nuevo_escenario = models.Escenario(
-        name=f"Copia de {escenario.name}",
+        name=nuevo_nombre,
         description=escenario.description,
-        proyecto_id=escenario.proyecto_id
+        proyecto_id=escenario.proyecto_id,
+        corte=escenario.corte  # Mantener el mismo valor de corte
+
     )
     db.add(nuevo_escenario)
     db.flush()  # Para obtener el id del nuevo escenario

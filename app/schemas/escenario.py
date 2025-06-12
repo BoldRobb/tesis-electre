@@ -17,6 +17,7 @@ class EscenarioCreate(EscenarioBase):
 
 # Propiedades para actualizar un escenario
 class EscenarioUpdate(EscenarioBase):
+    corte: Optional[float] = None
     pass
 
 
@@ -26,6 +27,7 @@ class EscenarioInDB(EscenarioBase):
     proyecto_id: int
     created_at: datetime
     updated_at: datetime
+    corte: Optional[float] = None
     
     class Config:
         orm_mode = True

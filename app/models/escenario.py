@@ -1,4 +1,4 @@
-from sqlalchemy import Column, ForeignKey, Integer, String, Text, DateTime
+from sqlalchemy import Column, ForeignKey, Integer, String, Text, DateTime, Float
 from sqlalchemy.orm import relationship
 import datetime
 
@@ -13,6 +13,7 @@ class Escenario(Base):
     description = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+    corte = Column(Float, nullable=True)
     proyecto_id = Column(Integer, ForeignKey("proyectos.id"))
     
     # Relaciones

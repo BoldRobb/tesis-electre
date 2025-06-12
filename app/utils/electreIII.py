@@ -10,7 +10,7 @@ from typing import List, Optional, Dict, Tuple
 from contextlib import contextmanager
 from app.core.config import settings
 
-from app.models import Alternativa, Criterio, Evaluacion
+from app.models import Alternativa, Criterio, Evaluacion, Escenario
 
 def interpretar_resultado_flujo_neto(resultado):
     # Ejemplo: ":A1:1;:B2:0;:C3:-1;"
@@ -335,6 +335,11 @@ def obtener_datos_escenario_para_electre(db: Session, escenario_id: int) -> Dict
     if not alternativas or not criterios or not evaluaciones:
         raise ValueError(f"No se encontraron datos suficientes para el escenario {escenario_id}")
     
+    #Obtener corte del escenario si no, colocar -1
+    corte = db.query(Escenario).filter(Escenario.id == escenario_id).first().corte
+    if corte is None:
+        corte = -1
+
     # Crear diccionario de evaluaciones para acceso rápido
     eval_dict = {}
     for eval in evaluaciones:
@@ -409,7 +414,8 @@ def obtener_datos_escenario_para_electre(db: Session, escenario_id: int) -> Dict
         'veto': veto,
         'direccion': direccion,
         'alternativas_obj': alternativas,
-        'criterios_obj': criterios
+        'criterios_obj': criterios,
+        'corte' : corte
     }
 
 def crear_csv_electre3_desde_bd(db: Session, escenario_id: int, 
@@ -499,8 +505,7 @@ def csv_temporal_electre3_desde_bd(db: Session, escenario_id: int):
         except OSError:
             print(f"No se pudo eliminar el archivo temporal: {archivo_temporal}")
 
-def ejecutar_electre3_desde_bd_flujo_neto(db: Session, escenario_id: int,
-                              lambda_corte: float = -1) -> Optional[str]:
+def ejecutar_electre3_desde_bd_flujo_neto(db: Session, escenario_id: int) -> Optional[str]:
     """
     Ejecuta ELECTRE III usando datos directamente de la base de datos
     
@@ -530,7 +535,7 @@ def ejecutar_electre3_desde_bd_flujo_neto(db: Session, escenario_id: int,
         # Usar archivo temporal desde la BD
         with csv_temporal_electre3_desde_bd(db, escenario_id) as archivo_csv:
             
-            print(f"Ejecutando ELECTRE III para escenario {escenario_id} con λ = {lambda_corte}")
+            print(f"Ejecutando ELECTRE III para escenario {escenario_id} con λ = {datos['corte']}")
             # Leer el contenido del archivo CSV y reemplazar saltos de línea por ':'
             with open(archivo_csv, 'r', encoding='utf-8') as f:
                 csv_content = f.read().replace('\n', ':')
@@ -539,7 +544,7 @@ def ejecutar_electre3_desde_bd_flujo_neto(db: Session, escenario_id: int,
             resultado = dll.ElectreIIIExplotarFlujoNeto(
                 ctypes.c_long(num_alternativas),
                 ctypes.c_long(num_criterios),
-                ctypes.c_double(lambda_corte),
+                ctypes.c_double(datos['corte']),
                 csv_content.encode('utf-8')
             )
 
@@ -563,7 +568,7 @@ def ejecutar_electre3_desde_bd_flujo_neto(db: Session, escenario_id: int,
 
 
 def ejecutar_electre3_desde_bd_destilacion(db: Session, escenario_id: int,
-                              lambda_corte: float = -1) -> Optional[str]:
+                              ) -> Optional[str]:
     """
     Ejecuta ELECTRE III usando datos directamente de la base de datos
     
@@ -593,7 +598,7 @@ def ejecutar_electre3_desde_bd_destilacion(db: Session, escenario_id: int,
         # Usar archivo temporal desde la BD
         with csv_temporal_electre3_desde_bd(db, escenario_id) as archivo_csv:
             
-            print(f"Ejecutando ELECTRE III para escenario {escenario_id} con λ = {lambda_corte}")
+            print(f"Ejecutando ELECTRE III para escenario {escenario_id} con λ = {datos['corte']}")
             # Leer el contenido del archivo CSV y reemplazar saltos de línea por ':'
             with open(archivo_csv, 'r', encoding='utf-8') as f:
                 csv_content = f.read().replace('\n', ':')
@@ -605,7 +610,7 @@ def ejecutar_electre3_desde_bd_destilacion(db: Session, escenario_id: int,
             resultado = dll.ElectreIIIExplotarDestilacion(
                 ctypes.c_long(num_alternativas),
                 ctypes.c_long(num_criterios),
-                ctypes.c_double(lambda_corte),
+                ctypes.c_double(datos['corte']),
                 csv_content.encode('utf-8')
             )
 
@@ -742,7 +747,7 @@ def ejecutar_electre3_desde_argumentos_flujo_neto(
     indiferencia,
     veto,
     direccion,
-    lambda_corte: float = -1,
+    lambda_corte,
     nombres_alternativas=None
 ) -> Optional[str]:
     """
@@ -823,7 +828,7 @@ def ejecutar_electre3_desde_argumentos_destilacion(
     indiferencia,
     veto,
     direccion,
-    lambda_corte: float = -1,
+    lambda_corte,
     nombres_alternativas=None
 ) -> Optional[str]:
     """

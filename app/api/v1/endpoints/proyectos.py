@@ -117,6 +117,7 @@ def clonar_proyecto(
     *,
     db: Session = Depends(get_db),
     id: int,
+    nuevo_nombre: str,
     current_user: models.User = Depends(deps.get_current_user),
 ) -> Any:
     """
@@ -132,7 +133,7 @@ def clonar_proyecto(
 
     # Crear el nuevo proyecto (clon)
     nuevo_proyecto = models.Proyecto(
-        title=f"Copia de {proyecto.title}",
+        title=nuevo_nombre,
         description=proyecto.description,
         owner_id=current_user.id,
     )
@@ -143,7 +144,8 @@ def clonar_proyecto(
         nuevo_escenario = models.Escenario(
             name=escenario.name,
             description=escenario.description,
-            proyecto_id=nuevo_proyecto.id
+            proyecto_id=nuevo_proyecto.id,
+            corte =escenario.corte,
         )
         db.add(nuevo_escenario)
         db.flush()
