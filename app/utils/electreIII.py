@@ -522,7 +522,7 @@ def ejecutar_electre3_desde_bd_flujo_neto(db: Session, escenario_id: int) -> Opt
         import ctypes
         
         # Cargar la DLL
-        os.add_dll_directory(r'C:\msys64\mingw64\bin')
+        os.add_dll_directory(settings.DEBUGGER_PATH)
         dll = ctypes.CDLL(settings.DLL_PATH)
 
         dll.ElectreIIIExplotarFlujoNeto.argtypes = [ctypes.c_long, ctypes.c_long, ctypes.c_double, ctypes.c_char_p]
@@ -585,7 +585,7 @@ def ejecutar_electre3_desde_bd_destilacion(db: Session, escenario_id: int,
         import ctypes
         
         # Cargar la DLL
-        os.add_dll_directory(r'C:\msys64\mingw64\bin')
+        os.add_dll_directory(settings.DEBUGGER_PATH)
         dll = ctypes.CDLL(settings.DLL_PATH)
 
         dll.ElectreIIIExplotarDestilacion.argtypes = [ctypes.c_long, ctypes.c_long, ctypes.c_double, ctypes.c_char_p]
@@ -772,7 +772,7 @@ def ejecutar_electre3_desde_argumentos_flujo_neto(
         import os
 
         # Cargar la DLL
-        os.add_dll_directory(r'C:\msys64\mingw64\bin')
+        os.add_dll_directory(settings.DEBUGGER_PATH)
         dll = ctypes.CDLL(settings.DLL_PATH)
 
         dll.ElectreIIIExplotarFlujoNeto.argtypes = [
@@ -853,7 +853,7 @@ def ejecutar_electre3_desde_argumentos_destilacion(
         import os
 
         # Cargar la DLL
-        os.add_dll_directory(r'C:\msys64\mingw64\bin')
+        os.add_dll_directory(settings.DEBUGGER_PATH)
         dll = ctypes.CDLL(settings.DLL_PATH)
 
         dll.ElectreIIIExplotarDestilacion.argtypes = [
