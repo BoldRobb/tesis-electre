@@ -900,3 +900,308 @@ def ejecutar_electre3_desde_argumentos_destilacion(
     except Exception as e:
         print(f"Error al ejecutar ELECTRE III desde argumentos: {e}")
         return None
+
+def ejecutar_electre3_desde_csv_destilacion(ruta_csv: str, lambda_corte: float = -1) -> Optional[str]:
+    """
+    Ejecuta ELECTRE III método de destilación leyendo directamente un archivo CSV.
+
+    Args:
+        ruta_csv: Ruta al archivo CSV con formato ELECTRE III
+        lambda_corte: Valor de corte lambda (por defecto -1)
+
+    Returns:
+        Lista de alternativas ordenadas según destilación o None si hay error
+    """
+    try:
+        import ctypes
+        import os
+
+        # Leer el archivo CSV con el formato correcto (separador de comas, punto y coma al final)
+        # Primero leer líneas manualmente para procesarlas correctamente
+        with open(ruta_csv, 'r', encoding='utf-8') as f:
+            lineas = [linea.strip().rstrip(';') for linea in f.readlines() if linea.strip()]
+        
+        # Parsear cada línea dividiendo por comas
+        matriz_datos = []
+        for linea in lineas:
+            if linea:
+                valores = [val.strip() for val in linea.split(',')]
+                matriz_datos.append(valores)
+        
+        # Convertir a numpy array para facilitar el manejo
+        matriz = np.array(matriz_datos, dtype=object)
+        
+        # Identificar filas especiales (W, P, I, Q, V, D)
+        filas_especiales = {}
+        indices_alternativas = []
+        
+        for i, fila in enumerate(matriz):
+            primera_col = str(fila[0]).strip()
+            if primera_col in ['W', 'P', 'I', 'Q', 'V', 'D']:
+                filas_especiales[primera_col] = i
+            elif primera_col != '-':  # Ignorar la fila de encabezado
+                indices_alternativas.append(i)
+        
+        # Extraer datos
+        num_alternativas = len(indices_alternativas)
+        num_criterios = len(matriz[0]) - 1  # -1 porque la primera columna son nombres
+        
+        # Nombres de alternativas
+        nombres_alternativas = [str(matriz[i][0]).strip() for i in indices_alternativas]
+        
+        # Nombres de criterios (de la primera fila con encabezado '-')
+        fila_encabezado = None
+        for i, fila in enumerate(matriz):
+            if str(fila[0]).strip() == '-':
+                fila_encabezado = i
+                break
+        
+        if fila_encabezado is not None and len(matriz[fila_encabezado]) > 1:
+            criterios_nombres = [str(matriz[fila_encabezado][j]).strip() for j in range(1, len(matriz[fila_encabezado]))]
+        else:
+            criterios_nombres = [f"C{j}" for j in range(num_criterios)]
+        
+        # Matriz de alternativas
+        alternativas_matriz = []
+        for i in indices_alternativas:
+            fila_valores = []
+            for j in range(1, num_criterios + 1):
+                valor = matriz[i][j]
+                # Convertir a float, manejando posibles NaN
+                try:
+                    fila_valores.append(float(valor))
+                except (ValueError, TypeError):
+                    fila_valores.append(0.0)
+            alternativas_matriz.append(fila_valores)
+        
+        # Extraer parámetros de filas especiales
+        def extraer_fila_parametros(letra):
+            if letra in filas_especiales:
+                idx = filas_especiales[letra]
+                parametros = []
+                for j in range(1, num_criterios + 1):
+                    try:
+                        parametros.append(float(matriz[idx][j]))
+                    except (ValueError, TypeError, IndexError):
+                        parametros.append(0.0)
+                return parametros
+            else:
+                return [0.0] * num_criterios
+        
+        pesos = extraer_fila_parametros('W')
+        preferencia = extraer_fila_parametros('P')
+        # Intentar 'I' primero, luego 'Q' si no existe
+        indiferencia = extraer_fila_parametros('I') if 'I' in filas_especiales else extraer_fila_parametros('Q')
+        veto = extraer_fila_parametros('V')
+        direccion = extraer_fila_parametros('D')
+        
+        # Convertir direcciones a enteros
+        direccion = [int(d) for d in direccion]
+        
+        print(f"CSV procesado: {num_alternativas} alternativas, {num_criterios} criterios")
+        print(f"Alternativas: {nombres_alternativas}")
+        print(f"Criterios: {criterios_nombres}")
+        
+        # Cargar la DLL
+        os.add_dll_directory(settings.DEBUGGER_PATH)
+        dll = ctypes.CDLL(settings.DLL_PATH)
+
+        dll.ElectreIIIExplotarDestilacion.argtypes = [
+            ctypes.c_long, ctypes.c_long, ctypes.c_double, ctypes.c_char_p
+        ]
+        dll.ElectreIIIExplotarDestilacion.restype = ctypes.c_char_p
+
+        # Crear archivo CSV temporal con formato correcto
+        with csv_temporal_electre3(
+            alternativas_matriz, criterios_nombres, pesos,
+            preferencia, indiferencia, veto, direccion, nombres_alternativas
+        ) as archivo_csv:
+
+            # Leer el contenido del archivo CSV y reemplazar saltos de línea por ':'
+            with open(archivo_csv, 'r', encoding='utf-8') as f:
+                csv_content = f.read().replace('\n', ':')
+
+        # Ejecutar FUERA del context manager para evitar que se elimine el archivo antes de tiempo
+        print(f"Ejecutando ELECTRE III Destilación con λ = {lambda_corte}")
+        print(f"Contenido CSV a enviar: {csv_content[:200]}...")  # Mostrar primeros 200 caracteres
+        
+        # Llamar a la función DLL
+        resultado = dll.ElectreIIIExplotarDestilacion(
+            ctypes.c_long(num_alternativas),
+            ctypes.c_long(num_criterios),
+            ctypes.c_double(lambda_corte),
+            csv_content.encode('utf-8')
+        )
+
+        if resultado:
+            resultado_str = resultado.decode('utf-8')
+            print("Resultado ELECTRE III (Destilación):")
+            print(resultado_str)
+            resultado_alternativas = interpretar_resultado_destilacion(resultado_str)
+            print("Alternativas ordenadas por Destilación:")
+            for idx, alt in enumerate(resultado_alternativas, 1):
+                print(f"  {idx}. {alt}")
+
+            return resultado_alternativas
+        else:
+            print("La DLL no retornó resultado")
+            return None
+
+    except Exception as e:
+        print(f"Error al ejecutar ELECTRE III desde CSV (Destilación): {e}")
+        import traceback
+        traceback.print_exc()
+        return None
+
+def ejecutar_electre3_desde_csv_flujo_neto(ruta_csv: str, lambda_corte: float = -1) -> Optional[str]:
+    """
+    Ejecuta ELECTRE III método de flujo neto leyendo directamente un archivo CSV.
+
+    Args:
+        ruta_csv: Ruta al archivo CSV con formato ELECTRE III
+        lambda_corte: Valor de corte lambda (por defecto -1)
+
+    Returns:
+        Lista de alternativas ordenadas según flujo neto o None si hay error
+    """
+    try:
+        import ctypes
+        import os
+
+        # Leer el archivo CSV con el formato correcto (separador de comas, punto y coma al final)
+        # Primero leer líneas manualmente para procesarlas correctamente
+        with open(ruta_csv, 'r', encoding='utf-8') as f:
+            lineas = [linea.strip().rstrip(';') for linea in f.readlines() if linea.strip()]
+        
+        # Parsear cada línea dividiendo por comas
+        matriz_datos = []
+        for linea in lineas:
+            if linea:
+                valores = [val.strip() for val in linea.split(',')]
+                matriz_datos.append(valores)
+        
+        # Convertir a numpy array para facilitar el manejo
+        matriz = np.array(matriz_datos, dtype=object)
+        
+        # Identificar filas especiales (W, P, I, Q, V, D)
+        filas_especiales = {}
+        indices_alternativas = []
+        
+        for i, fila in enumerate(matriz):
+            primera_col = str(fila[0]).strip()
+            if primera_col in ['W', 'P', 'I', 'Q', 'V', 'D']:
+                filas_especiales[primera_col] = i
+            elif primera_col != '-':  # Ignorar la fila de encabezado
+                indices_alternativas.append(i)
+        
+        # Extraer datos
+        num_alternativas = len(indices_alternativas)
+        num_criterios = len(matriz[0]) - 1  # -1 porque la primera columna son nombres
+        
+        # Nombres de alternativas
+        nombres_alternativas = [str(matriz[i][0]).strip() for i in indices_alternativas]
+        
+        # Nombres de criterios (de la primera fila con encabezado '-')
+        fila_encabezado = None
+        for i, fila in enumerate(matriz):
+            if str(fila[0]).strip() == '-':
+                fila_encabezado = i
+                break
+        
+        if fila_encabezado is not None and len(matriz[fila_encabezado]) > 1:
+            criterios_nombres = [str(matriz[fila_encabezado][j]).strip() for j in range(1, len(matriz[fila_encabezado]))]
+        else:
+            criterios_nombres = [f"C{j}" for j in range(num_criterios)]
+        
+        # Matriz de alternativas
+        alternativas_matriz = []
+        for i in indices_alternativas:
+            fila_valores = []
+            for j in range(1, num_criterios + 1):
+                valor = matriz[i][j]
+                # Convertir a float, manejando posibles NaN
+                try:
+                    fila_valores.append(float(valor))
+                except (ValueError, TypeError):
+                    fila_valores.append(0.0)
+            alternativas_matriz.append(fila_valores)
+        
+        # Extraer parámetros de filas especiales
+        def extraer_fila_parametros(letra):
+            if letra in filas_especiales:
+                idx = filas_especiales[letra]
+                parametros = []
+                for j in range(1, num_criterios + 1):
+                    try:
+                        parametros.append(float(matriz[idx][j]))
+                    except (ValueError, TypeError, IndexError):
+                        parametros.append(0.0)
+                return parametros
+            else:
+                return [0.0] * num_criterios
+        
+        pesos = extraer_fila_parametros('W')
+        preferencia = extraer_fila_parametros('P')
+        # Intentar 'I' primero, luego 'Q' si no existe
+        indiferencia = extraer_fila_parametros('I') if 'I' in filas_especiales else extraer_fila_parametros('Q')
+        veto = extraer_fila_parametros('V')
+        direccion = extraer_fila_parametros('D')
+        
+        # Convertir direcciones a enteros
+        direccion = [int(d) for d in direccion]
+        
+        print(f"CSV procesado: {num_alternativas} alternativas, {num_criterios} criterios")
+        print(f"Alternativas: {nombres_alternativas}")
+        print(f"Criterios: {criterios_nombres}")
+        
+        # Cargar la DLL
+        os.add_dll_directory(settings.DEBUGGER_PATH)
+        dll = ctypes.CDLL(settings.DLL_PATH)
+
+        dll.ElectreIIIExplotarFlujoNeto.argtypes = [
+            ctypes.c_long, ctypes.c_long, ctypes.c_double, ctypes.c_char_p
+        ]
+        dll.ElectreIIIExplotarFlujoNeto.restype = ctypes.c_char_p
+
+        # Crear archivo CSV temporal con formato correcto
+        with csv_temporal_electre3(
+            alternativas_matriz, criterios_nombres, pesos,
+            preferencia, indiferencia, veto, direccion, nombres_alternativas
+        ) as archivo_csv:
+
+            # Leer el contenido del archivo CSV y reemplazar saltos de línea por ':'
+            with open(archivo_csv, 'r', encoding='utf-8') as f:
+                csv_content = f.read().replace('\n', ':')
+
+        # Ejecutar FUERA del context manager para evitar que se elimine el archivo antes de tiempo
+        print(f"Ejecutando ELECTRE III Flujo Neto con λ = {lambda_corte}")
+        print(f"Contenido CSV a enviar: {csv_content[:200]}...")  # Mostrar primeros 200 caracteres
+        
+        # Llamar a la función DLL
+        resultado = dll.ElectreIIIExplotarFlujoNeto(
+            ctypes.c_long(num_alternativas),
+            ctypes.c_long(num_criterios),
+            ctypes.c_double(lambda_corte),
+            csv_content.encode('utf-8')
+        )
+
+        if resultado:
+            resultado_str = resultado.decode('utf-8')
+            print("Resultado ELECTRE III (Flujo Neto):")
+            print(resultado_str)
+            resultado_alternativas = interpretar_resultado_flujo_neto(resultado_str)
+            print("Alternativas ordenadas por Flujo Neto:")
+            for idx, alt in enumerate(resultado_alternativas, 1):
+                print(f"  {idx}. {alt}")
+
+            return resultado_alternativas
+        else:
+            print("La DLL no retornó resultado")
+            return None
+
+    except Exception as e:
+        print(f"Error al ejecutar ELECTRE III desde CSV (Flujo Neto): {e}")
+        import traceback
+        traceback.print_exc()
+        return None
+

@@ -12,8 +12,11 @@ from fastapi.responses import FileResponse
 import os
 from app.utils.electreIII import crear_csv_electre3_desde_bd
 from app.utils.electreIII import ejecutar_electre3_desde_bd_flujo_neto
-from app.utils.electreIII import ejecutar_electre3_desde_bd_destilacion, ejecutar_electre3_desde_argumentos_destilacion, ejecutar_electre3_desde_argumentos_flujo_neto
+from app.utils.electreIII import ejecutar_electre3_desde_bd_destilacion, ejecutar_electre3_desde_argumentos_destilacion, ejecutar_electre3_desde_argumentos_flujo_neto, ejecutar_electre3_desde_csv_destilacion, ejecutar_electre3_desde_csv_flujo_neto
 from app.models.ElectreRequest import ElectreIIIRequest
+from fastapi import UploadFile, File, Form
+import tempfile
+import shutil
 router = APIRouter()
 
 @router.get("/escenarios/{escenario_id}/reporte", response_class=PlainTextResponse)
@@ -113,3 +116,63 @@ def ejecutar_electre3(request: ElectreIIIRequest):
     return resultado
 
 
+@router.post("/ejecutar_directo_flujo_neto")
+async def ejecutar_electre3_directo_flujo_neto(file: UploadFile = File(...), lambda_corte: float = Form(...)):
+    """
+    Endpoint que recibe un archivo CSV y un valor lambda (float), guarda temporalmente el CSV
+    y llama a ejecutar_electre3_desde_csv_flujo_neto con la ruta del archivo y el lambda.
+    """
+    try:
+        # Guardar archivo subido en un archivo temporal
+        suffix = ".csv"
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+            shutil.copyfileobj(file.file, tmp)
+            tmp_path = tmp.name
+
+        # Llamar a la función que ejecuta ELECTRE III desde CSV (ajustar kwargs según la firma real)
+        resultado = ejecutar_electre3_desde_csv_flujo_neto(tmp_path, lambda_corte=lambda_corte)
+
+        # Borrar archivo temporal
+        try:
+            os.remove(tmp_path)
+        except Exception:
+            pass
+
+        if resultado is None:
+            raise HTTPException(status_code=500, detail="Error al ejecutar ELECTRE III")
+        return resultado
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+        
+@router.post("/ejecutar_directo_destilacion")
+async def ejecutar_electre3_directo_destilacion(file: UploadFile = File(...), lambda_corte: float = Form(...)):
+    """
+    Endpoint que recibe un archivo CSV y un valor lambda (float), guarda temporalmente el CSV
+    y llama a ejecutar_electre3_desde_csv_destilacion con la ruta del archivo y el lambda.
+    """
+    try:
+        # Guardar archivo subido en un archivo temporal
+        suffix = ".csv"
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+            shutil.copyfileobj(file.file, tmp)
+            tmp_path = tmp.name
+
+        # Llamar a la función que ejecuta ELECTRE III desde CSV (ajustar kwargs según la firma real)
+        resultado = ejecutar_electre3_desde_csv_destilacion(tmp_path, lambda_corte=lambda_corte)
+
+        # Borrar archivo temporal
+        try:
+            os.remove(tmp_path)
+        except Exception:
+            pass
+
+        if resultado is None:
+            raise HTTPException(status_code=500, detail="Error al ejecutar ELECTRE III")
+        return resultado
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
