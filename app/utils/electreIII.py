@@ -4,6 +4,7 @@ import tempfile
 import re
 import os
 import ctypes
+import platform
 from contextlib import contextmanager
 from sqlalchemy.orm import Session
 from typing import List, Optional, Dict, Tuple
@@ -11,6 +12,21 @@ from contextlib import contextmanager
 from app.core.config import settings
 
 from app.models import Alternativa, Criterio, Evaluacion, Escenario
+
+def cargar_dll_electre():
+    """
+    Carga la librería ELECTRE III de forma compatible con Windows y Linux.
+    
+    Returns:
+        ctypes.CDLL: Instancia de la librería cargada
+    """
+    if platform.system() == 'Windows':
+        # En Windows, añadir el directorio de DLLs al path de búsqueda
+        os.add_dll_directory(settings.DEBUGGER_PATH)
+    
+    # Cargar la librería (.dll en Windows, .so en Linux)
+    dll = ctypes.CDLL(settings.DLL_PATH)
+    return dll
 
 def interpretar_resultado_flujo_neto(resultado):
     # Ejemplo: ":A1:1;:B2:0;:C3:-1;"
@@ -521,9 +537,8 @@ def ejecutar_electre3_desde_bd_flujo_neto(db: Session, escenario_id: int) -> Opt
     try:
         import ctypes
         
-        # Cargar la DLL
-        os.add_dll_directory(settings.DEBUGGER_PATH)
-        dll = ctypes.CDLL(settings.DLL_PATH)
+        # Cargar la DLL (compatible Windows/Linux)
+        dll = cargar_dll_electre()
 
         dll.ElectreIIIExplotarFlujoNeto.argtypes = [ctypes.c_long, ctypes.c_long, ctypes.c_double, ctypes.c_char_p]
         dll.ElectreIIIExplotarFlujoNeto.restype = ctypes.c_char_p
@@ -584,9 +599,8 @@ def ejecutar_electre3_desde_bd_destilacion(db: Session, escenario_id: int,
     try:
         import ctypes
         
-        # Cargar la DLL
-        os.add_dll_directory(settings.DEBUGGER_PATH)
-        dll = ctypes.CDLL(settings.DLL_PATH)
+        # Cargar la DLL (compatible Windows/Linux)
+        dll = cargar_dll_electre()
 
         dll.ElectreIIIExplotarDestilacion.argtypes = [ctypes.c_long, ctypes.c_long, ctypes.c_double, ctypes.c_char_p]
         dll.ElectreIIIExplotarDestilacion.restype = ctypes.c_char_p
@@ -771,9 +785,8 @@ def ejecutar_electre3_desde_argumentos_flujo_neto(
         import ctypes
         import os
 
-        # Cargar la DLL
-        os.add_dll_directory(settings.DEBUGGER_PATH)
-        dll = ctypes.CDLL(settings.DLL_PATH)
+        # Cargar la DLL (compatible Windows/Linux)
+        dll = cargar_dll_electre()
 
         dll.ElectreIIIExplotarFlujoNeto.argtypes = [
             ctypes.c_long, ctypes.c_long, ctypes.c_double, ctypes.c_char_p
@@ -852,9 +865,8 @@ def ejecutar_electre3_desde_argumentos_destilacion(
         import ctypes
         import os
 
-        # Cargar la DLL
-        os.add_dll_directory(settings.DEBUGGER_PATH)
-        dll = ctypes.CDLL(settings.DLL_PATH)
+        # Cargar la DLL (compatible Windows/Linux)
+        dll = cargar_dll_electre()
 
         dll.ElectreIIIExplotarDestilacion.argtypes = [
             ctypes.c_long, ctypes.c_long, ctypes.c_double, ctypes.c_char_p
@@ -1002,9 +1014,8 @@ def ejecutar_electre3_desde_csv_destilacion(ruta_csv: str, lambda_corte: float =
         print(f"Alternativas: {nombres_alternativas}")
         print(f"Criterios: {criterios_nombres}")
         
-        # Cargar la DLL
-        os.add_dll_directory(settings.DEBUGGER_PATH)
-        dll = ctypes.CDLL(settings.DLL_PATH)
+        # Cargar la DLL (compatible Windows/Linux)
+        dll = cargar_dll_electre()
 
         dll.ElectreIIIExplotarDestilacion.argtypes = [
             ctypes.c_long, ctypes.c_long, ctypes.c_double, ctypes.c_char_p
@@ -1154,9 +1165,8 @@ def ejecutar_electre3_desde_csv_flujo_neto(ruta_csv: str, lambda_corte: float = 
         print(f"Alternativas: {nombres_alternativas}")
         print(f"Criterios: {criterios_nombres}")
         
-        # Cargar la DLL
-        os.add_dll_directory(settings.DEBUGGER_PATH)
-        dll = ctypes.CDLL(settings.DLL_PATH)
+        # Cargar la DLL (compatible Windows/Linux)
+        dll = cargar_dll_electre()
 
         dll.ElectreIIIExplotarFlujoNeto.argtypes = [
             ctypes.c_long, ctypes.c_long, ctypes.c_double, ctypes.c_char_p
