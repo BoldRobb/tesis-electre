@@ -11,3 +11,8 @@ class ElectreIIIRequest(BaseModel):
     direccion: List[int] = Field(..., description="Dirección de cada criterio (1=beneficio, 0=costo)")
     lambda_corte: float = Field(0.50, description="Valor de corte lambda")
     nombres_alternativas: Optional[List[str]] = Field(None, description="Nombres de las alternativas (opcional)")
+
+class ResultadoRankingElectre(BaseModel):
+    alternativa: str = Field(..., description="Nombre de la alternativa")
+    score: float = Field(..., description="Score devuelto por ELECTRE III (flujo neto o nivel de destilación; mayor es mejor)")
+    posicion: int = Field(..., description="Posición en el ranking; alternativas con el mismo score comparten posición")

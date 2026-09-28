@@ -1,4 +1,4 @@
-from typing import Any, List
+from typing import Any, List, Union
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -13,7 +13,7 @@ import os
 from app.utils.electreIII import crear_csv_electre3_desde_bd
 from app.utils.electreIII import ejecutar_electre3_desde_bd_flujo_neto
 from app.utils.electreIII import ejecutar_electre3_desde_bd_destilacion, ejecutar_electre3_desde_argumentos_destilacion, ejecutar_electre3_desde_argumentos_flujo_neto, ejecutar_electre3_desde_csv_destilacion, ejecutar_electre3_desde_csv_flujo_neto
-from app.models.ElectreRequest import ElectreIIIRequest
+from app.models.ElectreRequest import ElectreIIIRequest, ResultadoRankingElectre
 from fastapi import UploadFile, File, Form
 import tempfile
 import shutil
@@ -55,28 +55,34 @@ def descargar_csv_electre3(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     
-@router.get("/escenarios/{escenario_id}/resultados_flujo_neto", response_model=List[str])
+@router.get("/escenarios/{escenario_id}/resultados_flujo_neto", response_model=Union[List[ResultadoRankingElectre], List[str]])
 def obtener_resultados_electre3(
     escenario_id: int,
+    detalle: bool = False,
     db: Session = Depends(get_db),
 ) -> any:
     """
     Endpoint para ejecutar ELECTRE III usando datos de la base de datos y obtener los resultados.
+
+    Con detalle=true devuelve cada alternativa con su score y posición (los empates comparten posición).
     """
-    resultado = ejecutar_electre3_desde_bd_flujo_neto(db, escenario_id)
+    resultado = ejecutar_electre3_desde_bd_flujo_neto(db, escenario_id, detalle=detalle)
     if resultado is None:
         raise HTTPException(status_code=500, detail="Error al ejecutar ELECTRE III")
     return resultado
 
-@router.get("/escenarios/{escenario_id}/resultados_destilacion", response_model=List[str])
+@router.get("/escenarios/{escenario_id}/resultados_destilacion", response_model=Union[List[ResultadoRankingElectre], List[str]])
 def obtener_resultados_electre3(
     escenario_id: int,
+    detalle: bool = False,
     db: Session = Depends(get_db),
 ) -> any:
     """
     Endpoint para ejecutar ELECTRE III usando datos de la base de datos y obtener los resultados.
+
+    Con detalle=true devuelve cada alternativa con su score y posición (los empates comparten posición).
     """
-    resultado = ejecutar_electre3_desde_bd_destilacion(db, escenario_id)
+    resultado = ejecutar_electre3_desde_bd_destilacion(db, escenario_id, detalle=detalle)
     if resultado is None:
         raise HTTPException(status_code=500, detail="Error al ejecutar ELECTRE III")
     return resultado
@@ -117,7 +123,7 @@ def ejecutar_electre3(request: ElectreIIIRequest):
 
 
 @router.post("/ejecutar_directo_flujo_neto")
-async def ejecutar_electre3_directo_flujo_neto(file: UploadFile = File(...), lambda_corte: float = Form(...)):
+async def ejecutar_electre3_directo_flujo_neto(file: UploadFile = File(...), lambda_corte: float = Form(...), detalle: bool = Form(False)):
     """
     Endpoint que recibe un archivo CSV y un valor lambda (float), guarda temporalmente el CSV
     y llama a ejecutar_electre3_desde_csv_flujo_neto con la ruta del archivo y el lambda.
@@ -130,7 +136,7 @@ async def ejecutar_electre3_directo_flujo_neto(file: UploadFile = File(...), lam
             tmp_path = tmp.name
 
         # Llamar a la función que ejecuta ELECTRE III desde CSV (ajustar kwargs según la firma real)
-        resultado = ejecutar_electre3_desde_csv_flujo_neto(tmp_path, lambda_corte=lambda_corte)
+        resultado = ejecutar_electre3_desde_csv_flujo_neto(tmp_path, lambda_corte=lambda_corte, detalle=detalle)
 
         # Borrar archivo temporal
         try:
@@ -148,7 +154,7 @@ async def ejecutar_electre3_directo_flujo_neto(file: UploadFile = File(...), lam
 
         
 @router.post("/ejecutar_directo_destilacion")
-async def ejecutar_electre3_directo_destilacion(file: UploadFile = File(...), lambda_corte: float = Form(...)):
+async def ejecutar_electre3_directo_destilacion(file: UploadFile = File(...), lambda_corte: float = Form(...), detalle: bool = Form(False)):
     """
     Endpoint que recibe un archivo CSV y un valor lambda (float), guarda temporalmente el CSV
     y llama a ejecutar_electre3_desde_csv_destilacion con la ruta del archivo y el lambda.
@@ -161,7 +167,7 @@ async def ejecutar_electre3_directo_destilacion(file: UploadFile = File(...), la
             tmp_path = tmp.name
 
         # Llamar a la función que ejecuta ELECTRE III desde CSV (ajustar kwargs según la firma real)
-        resultado = ejecutar_electre3_desde_csv_destilacion(tmp_path, lambda_corte=lambda_corte)
+        resultado = ejecutar_electre3_desde_csv_destilacion(tmp_path, lambda_corte=lambda_corte, detalle=detalle)
 
         # Borrar archivo temporal
         try:

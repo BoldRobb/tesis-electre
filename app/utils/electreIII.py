@@ -28,19 +28,49 @@ def cargar_dll_electre():
     dll = ctypes.CDLL(settings.DLL_PATH)
     return dll
 
+def parsear_resultado_electre(resultado):
+    """
+    Convierte la salida de la DLL en un ranking con score y posición.
+
+    La DLL devuelve pares ":Alternativa:score;" tanto en Flujo Neto como en
+    Destilación. En ambos métodos un score MAYOR es MEJOR:
+      - Flujo Neto: ":A1:1;:B2:0;:C3:-1;" (flujo neto de cada alternativa)
+      - Destilación: ":A1:2;:B2:1;:C3:0;" (nivel del preorden final, 0 = el peor)
+
+    Las alternativas con el mismo score comparten posición (ranking denso:
+    1, 1, 2, ...), por ejemplo dos alternativas empatadas en primer lugar.
+
+    Returns:
+        Lista de dicts {"alternativa", "score", "posicion"} ordenada de mejor a peor.
+    """
+    pares = re.findall(r":?([^:;]+):(-?[\d\.]+);", resultado)
+    ranking = sorted(
+        ((alt, float(val)) for alt, val in pares),
+        key=lambda x: x[1],
+        reverse=True
+    )
+
+    detalle = []
+    posicion = 0
+    score_anterior = None
+    for alt, score in ranking:
+        if score != score_anterior:
+            posicion += 1
+            score_anterior = score
+        detalle.append({
+            "alternativa": alt,
+            "score": int(score) if score.is_integer() else score,
+            "posicion": posicion
+        })
+    return detalle
+
 def interpretar_resultado_flujo_neto(resultado):
-    # Ejemplo: ":A1:1;:B2:0;:C3:-1;"
-    pares = re.findall(r":([^:;]+):([-\d\.]+);", resultado)
-    # Ordenar por valor de flujo neto (mayor es mejor)
-    ranking = sorted(pares, key=lambda x: float(x[1]), reverse=True)
-    return [alt for alt, val in ranking]
+    # Ejemplo: ":A1:1;:B2:0;:C3:-1;" (mayor flujo neto es mejor)
+    return [r["alternativa"] for r in parsear_resultado_electre(resultado)]
 
 def interpretar_resultado_destilacion(resultado):
-    # Ejemplo: "A1:0;B2:1;C3:2;"
-    pares = re.findall(r"([^:;]+):(\d+);", resultado)
-    # Ordenar por ranking (menor es mejor)
-    ranking = sorted(pares, key=lambda x: int(x[1]))
-    return [alt for alt, val in ranking]
+    # Ejemplo: ":A1:2;:B2:1;:C3:0;" (mayor nivel es mejor)
+    return [r["alternativa"] for r in parsear_resultado_electre(resultado)]
 
 def crear_csv_electre3(alternativas_matriz, criterios_nombres, pesos, preferencia, 
                        indiferencia, veto, direccion, nombre_archivo="electre3.csv"):
@@ -521,7 +551,7 @@ def csv_temporal_electre3_desde_bd(db: Session, escenario_id: int):
         except OSError:
             print(f"No se pudo eliminar el archivo temporal: {archivo_temporal}")
 
-def ejecutar_electre3_desde_bd_flujo_neto(db: Session, escenario_id: int) -> Optional[str]:
+def ejecutar_electre3_desde_bd_flujo_neto(db: Session, escenario_id: int, detalle: bool = False) -> Optional[list]:
     """
     Ejecuta ELECTRE III usando datos directamente de la base de datos
     
@@ -568,7 +598,7 @@ def ejecutar_electre3_desde_bd_flujo_neto(db: Session, escenario_id: int) -> Opt
                 resultado_str = resultado.decode('utf-8')
                 print("Resultado ELECTRE III:")
                 print(resultado_str)
-                resultado_alternativas = interpretar_resultado_flujo_neto(resultado_str)
+                resultado_alternativas = parsear_resultado_electre(resultado_str) if detalle else interpretar_resultado_flujo_neto(resultado_str)
                 print("Alternativas ordenadas por ELECTRE III:")
                 print(resultado_alternativas)
 
@@ -582,8 +612,7 @@ def ejecutar_electre3_desde_bd_flujo_neto(db: Session, escenario_id: int) -> Opt
         return None
 
 
-def ejecutar_electre3_desde_bd_destilacion(db: Session, escenario_id: int,
-                              ) -> Optional[str]:
+def ejecutar_electre3_desde_bd_destilacion(db: Session, escenario_id: int, detalle: bool = False) -> Optional[list]:
     """
     Ejecuta ELECTRE III usando datos directamente de la base de datos
     
@@ -634,7 +663,7 @@ def ejecutar_electre3_desde_bd_destilacion(db: Session, escenario_id: int,
                 print("Resultado ELECTRE III:")
                 print(resultado_str)
                 # Interpretar el resultado
-                resultado_alternativas = interpretar_resultado_destilacion(resultado_str)
+                resultado_alternativas = parsear_resultado_electre(resultado_str) if detalle else interpretar_resultado_destilacion(resultado_str)
                 print("Alternativas ordenadas por ELECTRE III:")
                 print(resultado_alternativas)
 
@@ -762,8 +791,9 @@ def ejecutar_electre3_desde_argumentos_flujo_neto(
     veto,
     direccion,
     lambda_corte,
-    nombres_alternativas=None
-) -> Optional[str]:
+    nombres_alternativas=None,
+    detalle: bool = False
+) -> Optional[list]:
     """
     Ejecuta ELECTRE III usando la DLL, recibiendo todos los datos como argumentos.
 
@@ -820,7 +850,7 @@ def ejecutar_electre3_desde_argumentos_flujo_neto(
 
             if resultado:
                 resultado_str = resultado.decode('utf-8')
-                resultado_alternativas = interpretar_resultado_flujo_neto(resultado_str)
+                resultado_alternativas = parsear_resultado_electre(resultado_str) if detalle else interpretar_resultado_flujo_neto(resultado_str)
                 print("Alternativas ordenadas por ELECTRE III:")
                 print(resultado_alternativas)
 
@@ -842,8 +872,9 @@ def ejecutar_electre3_desde_argumentos_destilacion(
     veto,
     direccion,
     lambda_corte,
-    nombres_alternativas=None
-) -> Optional[str]:
+    nombres_alternativas=None,
+    detalle: bool = False
+) -> Optional[list]:
     """
     Ejecuta ELECTRE III usando la DLL, recibiendo todos los datos como argumentos.
 
@@ -900,7 +931,7 @@ def ejecutar_electre3_desde_argumentos_destilacion(
 
             if resultado:
                 resultado_str = resultado.decode('utf-8')
-                resultado_alternativas = interpretar_resultado_destilacion(resultado_str)
+                resultado_alternativas = parsear_resultado_electre(resultado_str) if detalle else interpretar_resultado_destilacion(resultado_str)
                 print("Alternativas ordenadas por ELECTRE III:")
                 print(resultado_alternativas)
 
@@ -913,7 +944,7 @@ def ejecutar_electre3_desde_argumentos_destilacion(
         print(f"Error al ejecutar ELECTRE III desde argumentos: {e}")
         return None
 
-def ejecutar_electre3_desde_csv_destilacion(ruta_csv: str, lambda_corte: float = -1) -> Optional[str]:
+def ejecutar_electre3_desde_csv_destilacion(ruta_csv: str, lambda_corte: float = -1, detalle: bool = False) -> Optional[list]:
     """
     Ejecuta ELECTRE III método de destilación leyendo directamente un archivo CSV.
 
@@ -1048,7 +1079,7 @@ def ejecutar_electre3_desde_csv_destilacion(ruta_csv: str, lambda_corte: float =
             resultado_str = resultado.decode('utf-8')
             print("Resultado ELECTRE III (Destilación):")
             print(resultado_str)
-            resultado_alternativas = interpretar_resultado_destilacion(resultado_str)
+            resultado_alternativas = parsear_resultado_electre(resultado_str) if detalle else interpretar_resultado_destilacion(resultado_str)
             print("Alternativas ordenadas por Destilación:")
             for idx, alt in enumerate(resultado_alternativas, 1):
                 print(f"  {idx}. {alt}")
@@ -1064,7 +1095,7 @@ def ejecutar_electre3_desde_csv_destilacion(ruta_csv: str, lambda_corte: float =
         traceback.print_exc()
         return None
 
-def ejecutar_electre3_desde_csv_flujo_neto(ruta_csv: str, lambda_corte: float = -1) -> Optional[str]:
+def ejecutar_electre3_desde_csv_flujo_neto(ruta_csv: str, lambda_corte: float = -1, detalle: bool = False) -> Optional[list]:
     """
     Ejecuta ELECTRE III método de flujo neto leyendo directamente un archivo CSV.
 
@@ -1199,7 +1230,7 @@ def ejecutar_electre3_desde_csv_flujo_neto(ruta_csv: str, lambda_corte: float = 
             resultado_str = resultado.decode('utf-8')
             print("Resultado ELECTRE III (Flujo Neto):")
             print(resultado_str)
-            resultado_alternativas = interpretar_resultado_flujo_neto(resultado_str)
+            resultado_alternativas = parsear_resultado_electre(resultado_str) if detalle else interpretar_resultado_flujo_neto(resultado_str)
             print("Alternativas ordenadas por Flujo Neto:")
             for idx, alt in enumerate(resultado_alternativas, 1):
                 print(f"  {idx}. {alt}")

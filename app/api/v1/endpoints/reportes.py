@@ -64,8 +64,10 @@ def obtener_reporte_completo_proyecto(
             datos_electre = obtener_datos_escenario_para_electre(db, escenario.id)
             
             # Ejecutar ELECTRE III con ambos métodos
-            resultado_flujo_neto = ejecutar_electre3_desde_bd_flujo_neto(db, escenario.id)
-            resultado_destilacion = ejecutar_electre3_desde_bd_destilacion(db, escenario.id)
+            detalle_flujo_neto = ejecutar_electre3_desde_bd_flujo_neto(db, escenario.id, detalle=True)
+            detalle_destilacion = ejecutar_electre3_desde_bd_destilacion(db, escenario.id, detalle=True)
+            resultado_flujo_neto = [r["alternativa"] for r in detalle_flujo_neto] if detalle_flujo_neto is not None else None
+            resultado_destilacion = [r["alternativa"] for r in detalle_destilacion] if detalle_destilacion is not None else None
             
             # Preparar información del escenario
             escenario_info = {
@@ -99,7 +101,10 @@ def obtener_reporte_completo_proyecto(
                 "matriz_decision": datos_electre["matriz_decision"].tolist(),
                 "resultados_electre": {
                     "flujo_neto": resultado_flujo_neto,
-                    "destilacion": resultado_destilacion
+                    "destilacion": resultado_destilacion,
+                    # Score y posición de cada alternativa (los empates comparten posición)
+                    "flujo_neto_detalle": detalle_flujo_neto,
+                    "destilacion_detalle": detalle_destilacion
                 }
             }
             
